@@ -1,9 +1,3 @@
-"""
-resnet for 1-d signal data, pytorch version
- 
-Originally taken from Shenda Hong, Oct 2019
-"""
-
 from typing import Optional
 
 import torch

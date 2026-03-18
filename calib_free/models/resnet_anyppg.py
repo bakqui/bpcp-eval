@@ -1,8 +1,3 @@
-"""
-a modularized deep neural network for 1-d signal data, pytorch version
- 
-Shenda Hong, Mar 2020
-"""
 from typing import Optional
 
 import torch

@@ -1,0 +1,65 @@
+device: "cuda"
+seed: 1337
+
+# Training configuration
+batch_size: 64
+buffer_sizes:
+  unlabeled: 64
+  labeled: 8
+sampling_ratio: 0.25
+
+n_update_per_batch: 5
+lr: 1.0e-3
+momentum: 0.9
+weight_decay: 1.0e-3
+
+shrink_p: 2.5
+shrink_loc: 0.0
+shrink_speed: 10.0
+
+ssl_weight: 1.0
+sl_weight: 1.0
+
+# Model configuration
+patch_size: 30
+patch_stride: 15
+input_channels: 1
+embed_dim: 512
+num_heads: 8
+depth: 4
+ckpt_path: "./pretrained/ttc_pulsedb_trained_phase_II.ckpt"
+
+# Replace with local paths before real runs.
+savedir: "./outputs/calib_based/ttc"
+index_data_path: "./data/pulsedb/index"
+waveform_data_path: "./data/pulsedb/waveform"
+train_index_filename: "train.parquet"
+valid_index_filename: "valid.parquet"
+test_index_filename: "test.parquet"
+
+# Replace with your own column names before real runs.
+cal_column: "calib_point"
+case_id_column: 'caseid'
+segment_id_column: 'seg_num'
+sig_filename_column: 'filepath'
+sbp_column: 'sbp'
+dbp_column: 'dbp'
+
+# PPG Preprocessing
+crop_second: 10
+fs: 125
+resample_fs: 125
+transform:
+  - name: Resample
+    params:
+      target_length: ${crop_second} * ${resample_fs}
+  - name: ButterworthFilter
+    params:
+      fs: ${resample_fs}
+      cutoff: [0.8, 8]
+      order: 2
+      btype: bandpass
+  - name: Standardize
+    params:
+      axis: -1
+  - name: ToTensor

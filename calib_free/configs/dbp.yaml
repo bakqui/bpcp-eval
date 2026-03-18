@@ -1,0 +1,106 @@
+output_dir: ./outputs/calib_free
+model_name: inception1d
+exp_name: inception1d-scratch-dbp
+encoder_path: null
+resume: null
+start_epoch: 0
+seed: 0
+device: cuda
+use_amp: true
+mode: scratch  # options: scratch, linear, finetune
+
+ddp:
+  world_size: 1
+  rank: -1
+  gpu: 0
+  dist_url: env://
+  dist_backend: nccl
+  distributed: false
+  sync_bn: true
+
+model:
+  in_channels: 1
+  num_classes: 1
+
+dataset:
+  waveform_dir: ./data/pulsedb/waveform
+  index_dir: ./data/pulsedb/index
+  train_index: train.parquet
+  valid_index: valid.parquet
+  test_index: test.parquet
+
+  fpath_col: filepath
+  fs_col: null
+  label_col:
+  - dbp
+  case_id_col: caseid
+  segment_id_col: cp_segment_id
+  is_unstable_col: is_unstable
+
+  target_fs: null
+  target_length: 1250
+
+  train_transforms:
+  - butter_filter:
+      fs: 125
+      cutoff:
+      - 0.5
+      - 8
+      order: 3
+      btype: bandpass
+  - standardize:
+      axis: -1
+
+  eval_transforms:
+  - butter_filter:
+      fs: 125
+      cutoff:
+      - 0.5
+      - 8
+      order: 3
+      btype: bandpass
+  - standardize:
+      axis: -1
+
+  label_transforms: null
+  label_dtype: float
+
+dataloader:
+  batch_size: 512
+  num_workers: 4
+  pin_memory: false
+  segment_balanced: false
+
+train:
+  epochs: 50
+  accum_iter: 1
+  blr: null
+
+  # optimizer
+  optimizer: adamw
+  lr: 0.001
+  weight_decay: 0.001
+
+  # scheduler
+  warmup_epochs: 0
+  min_lr: 0.001
+
+  # gradient clipping
+  max_norm: 5.
+
+  # ddp
+  dist_eval: false
+
+loss:
+  name: mse
+
+metric:
+  compute_on_cpu: true
+  sync_on_compute: false
+  target_metrics:
+  - MeanSquaredError:
+      squared: false
+  - MeanAbsoluteError
+
+test:
+  target_metric: MeanAbsoluteError

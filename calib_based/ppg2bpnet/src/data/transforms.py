@@ -402,10 +402,8 @@ def build_transforms(cfg):
         name = t_cfg["name"]
         params = substitute_vars(t_cfg.get("params", {}), variables)
 
-        # globals()에서 클래스 가져오기
         cls = globals()[name]
         transforms.append(cls(**params))
 
-    # Compose도 globals()에서
     Compose_cls = globals()["Compose"]
     return Compose_cls(transforms)

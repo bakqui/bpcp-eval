@@ -1,6 +1,5 @@
 from typing import Dict, Tuple
 
-import torch
 import torchmetrics
 
 

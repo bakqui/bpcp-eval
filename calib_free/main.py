@@ -133,7 +133,6 @@ def train_one_epoch(
     for data_iter_step, samples in enumerate(
         metric_logger.log_every(data_loader, print_freq, header)
     ):
-        # we use a per iteration (instead of per epoch) lr scheduler
         if data_iter_step % accum_iter == 0:
             adjust_learning_rate(
                 optimizer,
@@ -217,7 +216,7 @@ def evaluate(
     valid_stats = {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
     metrics = metric_fn.compute()
-    if isinstance(metrics, dict):  # MetricCollection
+    if isinstance(metrics, dict):
         metrics = {k: v.item() for k, v in metrics.items()}
     else:
         metrics = {metric_fn.__class__.__name__: metrics.item()}
@@ -230,9 +229,7 @@ def evaluate(
 
 
 def run(config):
-    # 1) Set environmental variables and random seeds
-    # - set random seeds for reproducibility
-    # - set logging directory
+    # Set environmental variables and random seeds
     print(f'job dir: {os.path.dirname(os.path.realpath(__file__))}')
     print(yaml.dump(config, default_flow_style=False, sort_keys=False))
 
@@ -255,9 +252,7 @@ def run(config):
         output_dir = None
         log_writer = None
 
-    # 2) Load data for eval task and create dataloaders
-    # - load train/val/test data and labels based on eval config
-    # - create dataloaders for train/val/test sets
+    # Load data and create dataloaders
     dataset_train = build_dataset(config['dataset'], split='train')
     dataset_valid = build_dataset(config['dataset'], split='valid')
 
@@ -275,12 +270,10 @@ def run(config):
         **config['dataloader'],
     )
 
-    # 3) Load pretrained PulsePPG model
-    # - import model architecture based on eval config
-    # - create model instance
     model_name = config['model_name']
     model = models.__dict__[model_name](**config['model'])
 
+    # Load pretrained model
     if config['mode'] != "scratch":
         checkpoint = torch.load(config['encoder_path'], map_location='cpu')
         print(f"Load pre-trained checkpoint from: {config['encoder_path']}")
@@ -426,7 +419,7 @@ def run(config):
 
     # Start test
     if config.get('test', False) and misc.is_main_process():
-        # turn off ddp for testing
+        # Turn off ddp for testing
         if config['ddp']['distributed']:
             torch.distributed.destroy_process_group()
 

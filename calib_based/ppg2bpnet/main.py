@@ -11,7 +11,7 @@ from src.data.loader import fetch_dataloader
 from src.trainer import Trainer
 from src.evaluator import Evaluator
 from src.utils import init_exp, AttributeDict
-from src.models import build_model
+from src.models.PPG2BPNet import PPG2BPNet
 
 
 warnings.filterwarnings('ignore')
@@ -50,7 +50,12 @@ def main(params):
 
     # Initialize experiments
     logger, dump_path = init_exp(params)
-    model = build_model(params, logger)
+
+    model = PPG2BPNet(params)
+    if os.path.isfile(params.reload_path):
+        reloaded_model = torch.load(params.reload_path)
+        model.load_state_dict(reloaded_model['model'])
+        logger.info("========Reloaded model from {}".format(params.reload_path))
 
     train_dataloader = fetch_dataloader(params, mode="train")
 
@@ -81,7 +86,7 @@ def main(params):
     evaluator = Evaluator(params, model, valid_dataloder, test_dataloader, logger)
 
     if params.eval_only:
-        valid_mae, test_mae, test_pred, test_label = evaluator.evaluate_loader()
+        test_mae, test_pred, test_label = evaluator.evaluate_loader(test_only=True)
         save_data = {
             'test_pred': test_pred,
             'test_label': test_label,

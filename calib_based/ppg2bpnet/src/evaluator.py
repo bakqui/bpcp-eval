@@ -53,15 +53,7 @@ class Evaluator(object):
             if type(self.status[k]) is list:
                 del self.status[k][:]
 
-    def print_status_stat(self, mode):
-        self.logger.info("\n".join(mode+"_%s: %s" % (k, str(v[0])) \
-                    for k, v in sorted(dict(self.status_stat).items())))
-
-        for k in self.status_stat.keys():
-            if type(self.status_stat[k]) is list:
-                del self.status_stat[k][:]
-
-    def denoramalize(self, pred, label, dataloader):
+    def denormalize(self, pred, label, dataloader):
         scale_sbp_mean = dataloader.dataset.sbp_mean
         scale_sbp_std = dataloader.dataset.sbp_std
         scale_dbp_mean = dataloader.dataset.dbp_mean
@@ -72,12 +64,19 @@ class Evaluator(object):
         label[:, 1] = label[:, 1] * scale_dbp_std + scale_dbp_mean
         return pred, label
 
-    def evaluate_loader(self):
+    def evaluate_loader(self, test_only=False):
 
         # set model to evaluation mode
         self.model.eval()
-        split = ['valid', 'test']
-        for i, dataloader in enumerate(self.dataloader):
+
+        if test_only:
+            split = ['test']
+            dataloader = self.dataloader[1:2]
+        else:
+            split = ['valid', 'test']
+            dataloader = self.dataloader
+
+        for i, dataloader in enumerate(dataloader):
 
             total_losses = []
             label, pred = [], []
@@ -99,7 +98,7 @@ class Evaluator(object):
             pred = np.asarray(torch.cat(pred).cpu().detach().numpy())
             label = np.asarray(torch.cat(label).cpu())
 
-            pred, label = self.denoramalize(pred, label, dataloader)
+            pred, label = self.denormalize(pred, label, dataloader)
 
             sbp_mae = self.metrics['mae'](pred[:, 0], label[:, 0])
             dbp_mae = self.metrics['mae'](pred[:, 1], label[:, 1])
@@ -139,4 +138,7 @@ class Evaluator(object):
 
             self.print_status(split[i])
 
-        return valid_mae, test_mae, test_pred, test_label
+        if test_only:
+            return test_mae, test_pred, test_label
+        else:
+            return valid_mae, test_mae, test_pred, test_label

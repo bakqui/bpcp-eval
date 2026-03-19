@@ -50,16 +50,16 @@ def test_time_calibration_subjectwise(
         base_state = ckpt_state
 
     # TTC hyperparameters - mini-batch
-    batch_size = cfg.get("batch_size", 32)
+    batch_size = cfg.get("ttc_batch_size", 32)
     labeled_ratio = cfg.get("sampling_ratio", 0.25)  # e.g., 0.25 → 8 labeled, 24 unlabeled
     buffer_sizes = cfg.get("buffer_sizes", {})
     dual_buffer_max_unlabeled = buffer_sizes.get("unlabeled", 64)
     dual_buffer_max_labeled = buffer_sizes.get("labeled", 8)
 
     # TTC hyperparameters - optimizer
-    lr = cfg.get("lr", 1e-3)
-    momentum = cfg.get("momentum", 0.9)
-    wd = cfg.get("weight_decay", 1e-6)
+    lr = cfg.get("ttc_lr", 1e-3)
+    momentum = cfg.get("ttc_momentum", 0.9)
+    wd = cfg.get("ttc_weight_decay", 1e-6)
     n_update_per_batch = cfg.get("n_update_per_batch", 5)
 
     # TTC hyperparameters - patchify
@@ -67,13 +67,13 @@ def test_time_calibration_subjectwise(
     patch_stride = cfg.get("patch_stride", 15)
 
     # TTC hyperparameters - shrinkage loss
-    p_test = cfg.get("shrink_p", 2.5)
-    loc_test = cfg.get("shrink_loc", 0.0)
-    speed_test = cfg.get("shrink_speed", 10.0)
+    p_test = cfg.get("shrink_p_ttc", 2.5)
+    loc_test = cfg.get("shrink_loc_ttc", 0.0)
+    speed_test = cfg.get("shrink_speed_ttc", 10.0)
 
     # TTC hyperparameters - loss weights
-    ssl_w = cfg.get("ssl_weight", 1.0)
-    sl_w = cfg.get("sl_weight",  1.0)
+    ssl_w = cfg.get("ssl_weight_ttc", 1.0)
+    sl_w = cfg.get("sl_weight_ttc",  1.0)
 
     # Save directory
     savedir = cfg.get("savedir", "")

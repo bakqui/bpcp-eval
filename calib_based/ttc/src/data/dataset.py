@@ -76,12 +76,10 @@ class PulseDBDataset(Dataset):
         file = row[self.sig_filename_col]
         sbp = row[self.sbp_col]
         dbp = row[self.dbp_col]
-        seg_num = row[self.segment_id_col]
         cpd = row[self.cal_col]
 
         # Build input/output arrays
         output_arr = np.array([sbp, dbp], dtype=np.float32)  # (2,)
-        seg_num = np.array([seg_num], dtype=np.int32)
         cpd = np.array([cpd], dtype=np.int32)
 
         ppg = self.get_ppg(file)
@@ -89,6 +87,5 @@ class PulseDBDataset(Dataset):
         return {
             "x": ppg,
             "y": torch.from_numpy(output_arr),
-            "seg_num": torch.from_numpy(seg_num),
             "cpd": torch.from_numpy(cpd),
         }

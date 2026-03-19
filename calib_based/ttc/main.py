@@ -21,7 +21,9 @@ def read_config(config_path):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Test-time calibration for PPG-to-BP estimation"
+    )
     parser.add_argument(
         "-f",
         "--config_path",

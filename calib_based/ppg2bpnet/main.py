@@ -33,6 +33,7 @@ def parse_args():
         description="Calibration-based PPG-to-BP estimation with PPG2BP-Net"
     )
     parser.add_argument(
+        "-f",
         '--config_path',
         type=str,
         default='./configs/dummy.yaml',

@@ -49,9 +49,9 @@ Download original PulseDB [Segment files](https://drive.google.com/drive/folders
 
 ### Index files
 Index files are expected to include file path and label columns (configured in each YAML file), e.g. `filepath`, `sbp`, `dbp`, `caseid`, and segment/calibration-related columns. You can access the index files via the links below:
-- Training set: [link](https://drive.google.com/file/d/1s_3c2IaKU_IklhN7h7oGauuKWPHeiMwa)
-- Validation set: [link](https://drive.google.com/file/d/1yB0sWnavg6d7KFRdDPqX3tPdLN5XSluN)
-- Test set: [link](https://drive.google.com/file/d/1HkLxLJLqpjw0-TBriwNXHvRicq9yN125)
+- Training set: [link](https://drive.google.com/file/d/1WcUkfNZcpxsPrWzFu2usAG2A8iyt_5Bl)
+- Validation set: [link](https://drive.google.com/file/d/1Bt0hRGTZiTgge9xQJ7aq-ccvrvxCfT9F)
+- Test set: [link](https://drive.google.com/file/d/1rtfIoMST6xk_5m57u9T5Ul6v727qewh_)
 
 
 ## Run Experiments
@@ -83,7 +83,7 @@ or test-time calibration module (`TTC`):
 cd calib_based/ttc
 python main.py -f configs/config.yaml
 ```
-Before running, update each config file with your local dataset paths and index column names. For testing under different re-calibration points, set `cal_column` in the config file to the appropriate value:
+Before running, update each config file with your local dataset paths and index column names. For testing under different re-calibration points, set `eval_only` as `true` in the config file and change `cal_column` to the appropriate value:
 - Every 120 minutes: `calib_point_120min`
 - \+ $\Delta BP$: `calib_point_120min_deltabp`
 - \+ PELT: `calib_point_120min_pelt`

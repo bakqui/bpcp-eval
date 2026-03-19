@@ -26,10 +26,9 @@ def parse_args():
         "-f",
         "--config_path",
         type=str,
-        default="./configs/dummy.yaml",
+        default="./configs/config.yaml",
     )
     args = parser.parse_args()
-    # cfg = AttributeDict(importlib.import_module(args.config_name).CONFIG)
     params = read_config(args.config_path)
     return params
 
@@ -38,17 +37,46 @@ def main(params):
     set_seed(params.seed)
     device = params.device
 
-    # ----- Data -----
+    model = TTCModel(
+        in_ch=params.input_channels,
+        embed_dim=params.embed_dim,
+        patch_size=params.patch_size,
+        patch_stride=params.patch_stride,
+        depth=params.depth,
+        num_heads=params.num_heads,
+    ).to(device)
+
+    train_ds = PulseDBDataset(
+        params,
+        index_filename=params.train_index_filename
+    )
+
+    if not params.get("eval_only", False):
+        from src.train import train_ssl_init, train_joint
+
+        # ----- Phase 1: SSL init -----
+        print("=== Phase 1: SSL initialization ===")
+        train_ssl_init(model, train_ds, params)
+
+        # ----- Phase 2: SL+SSL fine-tune -----
+        print("=== Phase 2: SL+SSL fine-tuning ===")
+        train_joint(model, train_ds, params)
+
+        savedir = params.get("savedir", None)
+        if savedir is None:
+            savedir = "./exp_dump"
+        ckpt_path = os.path.join(savedir, "ttc_phase_II.ckpt")
+    else:
+        ckpt_path = params.get("ckpt_path", None)
+        if ckpt_path is None:
+            raise ValueError("Missing ckpt_path in config. Set path to trained TTC checkpoint.")
+
     if any(
         [
             params.get(key, None) is None
             for key in ["sbp_mean", "sbp_std", "dbp_mean", "dbp_std"]
         ]
     ):
-        train_ds = PulseDBDataset(
-            params,
-            index_filename=params.train_index_filename
-        )
         sbp_mean = train_ds.sbp_mean
         sbp_std = train_ds.sbp_std
         dbp_mean = train_ds.dbp_mean
@@ -68,23 +96,9 @@ def main(params):
         dbp_std=dbp_std,
     )
 
-    # ----- Model -----
-    model = TTCModel(
-        in_ch=params.input_channels,
-        embed_dim=params.embed_dim,
-        patch_size=params.patch_size,
-        patch_stride=params.patch_stride,
-        depth=params.depth,
-        num_heads=params.num_heads,
-    ).to(device)
-
     # ----- Test-time calibration -----
+    print("=== Phase 3: Test-time calibration ===")
     # Simulate a sequential stream; replace with your real deployment stream
-
-    # After you load trained model and build test_ds
-    ckpt_path = params.get("ckpt_path", "")
-    if not ckpt_path:
-        raise ValueError("Missing ckpt_path in config. Set path to trained TTC checkpoint.")
     ckpt = torch.load(ckpt_path, map_location="cpu")
     model.load_state_dict(ckpt["state_dict"])
 

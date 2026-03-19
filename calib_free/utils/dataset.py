@@ -2,7 +2,7 @@ import os
 import pickle as pkl
 import random
 from collections import defaultdict
-from typing import Dict, Iterable, Literal, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterable, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -25,9 +25,6 @@ class PulseDBDataset(Dataset):
         case_ids: Optional[Iterable] = None,
         segment_ids: Optional[Iterable] = None,
         is_unstable: Optional[Iterable] = None,
-        init_fs_list: Optional[Iterable] = None,
-        init_sbps: Optional[Iterable] = None,
-        init_dbps: Optional[Iterable] = None,
         target_fs: Optional[int] = None,
         target_length: Optional[int] = None,
         transform: Optional[object] = None,
@@ -40,9 +37,6 @@ class PulseDBDataset(Dataset):
         self.case_ids = case_ids
         self.segment_ids = segment_ids
         self.is_unstable = is_unstable
-        self.init_fpaths = [os.path.join(root_dir, fpath) for fpath in init_fs_list] if init_fs_list is not None else None
-        self.init_sbps = init_sbps
-        self.init_dbps = init_dbps
         self._check_dataset()
         if case_ids is not None:
             self.case_mapper = LabelEncoder().fit(case_ids)
@@ -76,20 +70,6 @@ class PulseDBDataset(Dataset):
         if self.is_unstable is not None:
             assert len(self.fpaths) == len(self.is_unstable), \
                 "The number of filenames and is_unstable flags are different."
-        init_fpath_not_pkl = [f for f in self.init_fpaths if not f.endswith('.pkl')] if self.init_fpaths is not None else []
-        assert len(init_fpath_not_pkl) == 0, \
-            f"Some calibration PPG files do not have .pkl extension. (e.g. {init_fpath_not_pkl[0]}...)"
-        assert all([os.path.exists(fpath) for fpath in self.init_fpaths]) if self.init_fpaths is not None else True, \
-            f"Some calibration PPG files do not exist. (e.g. {self.init_fpaths[0]}...)"
-        if self.init_fpaths is not None:
-            assert len(self.fpaths) == len(self.init_fpaths), \
-                "The number of filenames and init_fpaths are different."
-        if self.init_sbps is not None:
-            assert len(self.fpaths) == len(self.init_sbps), \
-                "The number of filenames and init_sbps are different."
-        if self.init_dbps is not None:
-            assert len(self.fpaths) == len(self.init_dbps), \
-                "The number of filenames and init_dbps are different."
 
     def __len__(self):
         return len(self.fpaths)
@@ -143,20 +123,6 @@ class PulseDBDataset(Dataset):
         if self.is_unstable is not None:
             is_unstable = self.is_unstable[idx]
             sample["is_unstable"] = torch.tensor(is_unstable, dtype=torch.float32)
-
-        if self.init_fpaths is not None:
-            init_fpath = self.init_fpaths[idx]
-            init_ppg = self._load_signal(init_fpath)
-            init_ppg = self._process_signal(init_ppg, fs)
-            sample["init_input"] = init_ppg
-
-        if self.init_sbps is not None:
-            init_sbp = self.init_sbps[idx]
-            sample["init_sbp"] = torch.tensor([init_sbp], dtype=torch.float32)
-
-        if self.init_dbps is not None:
-            init_dbp = self.init_dbps[idx]
-            sample["init_dbp"] = torch.tensor([init_dbp], dtype=torch.float32)
 
         return sample
 
@@ -227,9 +193,6 @@ def build_dataset(dataset_cfg: dict, split: str) -> Dataset:
     case_id_col = dataset_cfg.get("case_id_col", None)
     segment_id_col = dataset_cfg.get("segment_id_col", None)
     is_unstable_col = dataset_cfg.get("is_unstable_col", None)
-    init_fpath_col = dataset_cfg.get("init_fpath_col", None)
-    init_sbp_col = dataset_cfg.get("init_sbp_col", None)
-    init_dbp_col = dataset_cfg.get("init_dbp_col", None)
     target_fs = dataset_cfg.get("target_fs", None)
     target_length = dataset_cfg.get("target_length", None)
 
@@ -239,53 +202,13 @@ def build_dataset(dataset_cfg: dict, split: str) -> Dataset:
     case_ids = df[case_id_col].tolist() if case_id_col is not None else None
     segment_ids = df[segment_id_col].tolist() if segment_id_col is not None else None
     is_unstable = df[is_unstable_col].astype(bool).tolist() if is_unstable_col is not None else None
-    init_fpaths = df[init_fpath_col].tolist() if init_fpath_col is not None else None
-    init_sbps = df[init_sbp_col].astype(float).values if init_sbp_col is not None else None
-    init_dbps = df[init_dbp_col].astype(float).values if init_dbp_col is not None else None
 
     transforms = []
     if split == "train":
         transforms_cfg = dataset_cfg.get("train_transforms", [])
-        if init_sbps is not None:
-            # normalize by initial SBP during training
-            init_sbps_mean, init_sbps_std = init_sbps.mean(), init_sbps.std()
-            init_sbps = np.divide(
-                init_sbps - init_sbps_mean,
-                init_sbps_std,
-                out=np.zeros_like(init_sbps),
-                where=init_sbps_std != 0,
-            )
-        if init_dbps is not None:
-            # normalize by initial DBP during training
-            init_dbps_mean, init_dbps_std = init_dbps.mean(), init_dbps.std()
-            init_dbps = np.divide(
-                init_dbps - init_dbps_mean,
-                init_dbps_std,
-                out=np.zeros_like(init_dbps),
-                where=init_dbps_std != 0,
-            )
     else:
         transforms_cfg = dataset_cfg.get("eval_transforms", [])
-        if init_sbps is not None:
-            # normalize by initial SBP during evaluation
-            init_sbps_mean, init_sbps_std = dataset_cfg.get("init_sbp_mean", 0), dataset_cfg.get("init_sbp_std", 1)
-            init_sbps_mean, init_sbps_std = np.array(init_sbps_mean), np.array(init_sbps_std)
-            init_sbps = np.divide(
-                init_sbps - init_sbps_mean,
-                init_sbps_std,
-                out=np.zeros_like(init_sbps),
-                where=init_sbps_std != 0,
-            )
-        if init_dbps is not None:
-            # normalize by initial DBP during evaluation
-            init_dbps_mean, init_dbps_std = dataset_cfg.get("init_dbp_mean", 0), dataset_cfg.get("init_dbp_std", 1)
-            init_dbps_mean, init_dbps_std = np.array(init_dbps_mean), np.array(init_dbps_std)
-            init_dbps = np.divide(
-                init_dbps - init_dbps_mean,
-                init_dbps_std,
-                out=np.zeros_like(init_dbps),
-                where=init_dbps_std != 0,
-            )
+
     transforms += get_transforms_from_config(transforms_cfg)
     transform = T.Compose(transforms + [T.ToTensor()])
 
@@ -306,9 +229,6 @@ def build_dataset(dataset_cfg: dict, split: str) -> Dataset:
         case_ids=case_ids,
         segment_ids=segment_ids,
         is_unstable=is_unstable,
-        init_fs_list=init_fpaths,
-        init_sbps=init_sbps,
-        init_dbps=init_dbps,
         target_fs=target_fs,
         target_length=target_length,
         transform=transform,

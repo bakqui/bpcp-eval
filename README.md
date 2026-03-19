@@ -1,7 +1,5 @@
 # bpcp-eval
 
-This repository contains the implementation used in our paper titled "Change Point-Aware Evaluation and Re-Calibration of PPG-Based Blood Pressure Estimation".
-
 ## Table of Contents
 - [Overview](#overview)
 - [Environment Setup](#environment-setup)
@@ -16,11 +14,21 @@ This repository contains the implementation used in our paper titled "Change Poi
   <img src="assets/example.png" alt="Framework overview" width="90%">
 </div>
 
-Non-invasive continuous blood pressure (BP) estimation from photoplethysmography (PPG) is promising, but standard aggregate metrics can hide large errors during rapid BP fluctuations. In this work, we introduce a change point-aware evaluation framework that detects abrupt distribution shifts in BP trajectories and measures model performance specifically around those unstable periods. We show that both calibration-free and periodically calibrated approaches can degrade substantially near change points, and we further propose targeted re-calibration triggered by detected change points to improve robustness without changing model architecture.
+Non-invasive continuous blood pressure (BP) estimation from photoplethysmography (PPG) is promising. However, the current methodologies do not explicitly account for BP fluctuations driven by physiological stress, changes in posture, the effect of medication, or acute physiological events. 
 
 <div align="center">
   <img src="assets/overview.png" alt="Framework overview" width="80%">
 </div>
+
+In this work, we introduce a change point-aware evaluation framework that detects abrupt distribution shifts in BP trajectories and measures model performance specifically around those unstable periods. We show that both calibration-free and periodically calibrated approaches can degrade substantially near change points, and we further propose targeted re-calibration triggered by detected change points to improve robustness without changing model architecture.
+
+## Environment Setup
+```bash
+bpcp-eval$ conda create -n bpcp_eval python=3.9
+bpcp-eval$ conda activate bpcp_eval
+bpcp-eval$ pip install -r requirements.txt
+```
+
 
 ## Data Preparation
 
@@ -36,29 +44,29 @@ data/pulsedb/
     `-- test.parquet
 ```
 
-### Waveform segment format
+### Waveform files
+Download original PulseDB [Segment files](https://drive.google.com/drive/folders/1-WKcJgO9lAjY2HBepRGDqyF3xjFADr8-). Then run `data/segment_parse.py`. Each waveform file is a pickled dictionary containing `PPG_Raw`, 1D array of length `1250` (10 seconds at 125 Hz).
 
-Each waveform file is a pickled dictionary containing `PPG_Raw`, 1D array of length `1250` (10 seconds at 125 Hz)
+### Index files
+Index files are expected to include file path and label columns (configured in each YAML file), e.g. `filepath`, `sbp`, `dbp`, `caseid`, and segment/calibration-related columns. You can access the index files via the links below:
+- Training set: [link](https://drive.google.com/file/d/1s_3c2IaKU_IklhN7h7oGauuKWPHeiMwa)
+- Validation set: [link](https://drive.google.com/file/d/1yB0sWnavg6d7KFRdDPqX3tPdLN5XSluN)
+- Test set: [link](https://drive.google.com/file/d/1HkLxLJLqpjw0-TBriwNXHvRicq9yN125)
 
-Index files are expected to include file path and label columns (configured in each YAML file), e.g. `filepath`, `sbp`, `dbp`, `caseid`, and segment/calibration-related columns.
 
 ## Run Experiments
 
 ### Calibration-Free Estimation
 
-Run SBP experiment:
+Run experiments to train SBP/DBP estimation models and get BP estimations for the test set:
 
 ```bash
 cd calib_free
-bash run.sh -f configs/sbp.yaml
+bash run.sh -f configs/{sbp/dbp}.yaml
 ```
+Before running, update each config file with your local dataset paths and index column names. For training with interval-balanced strategy, please set `dataloader.segment_balanced` as `true` in the config file.
 
-Run DBP experiment:
-
-```bash
-cd calib_free
-bash run.sh -f configs/dbp.yaml
-```
+Evaluation on both whole-interval and unstable-interval performance can be performed using `notebooks/calib_free.ipynb`.
 
 ### Calibration-Based Estimation
 
@@ -69,12 +77,16 @@ cd calib_based/ppg2bpnet
 python main.py --config_path configs/config.yaml
 ```
 
-Run test-time calibration module (`TTC`):
+or test-time calibration module (`TTC`):
 
 ```bash
 cd calib_based/ttc
 python main.py -f configs/config.yaml
 ```
+Before running, update each config file with your local dataset paths and index column names. For testing under different re-calibration points, set `cal_column` in the config file to the appropriate value:
+- Every 120 minutes: `calib_point_120min`
+- \+ $\Delta BP$: `calib_point_120min_deltabp`
+- \+ PELT: `calib_point_120min_pelt`
+- \+ Online CPD: `calib_point_120min_supcon`
 
-Before running, update each config file with your local dataset paths and index column names.
-
+Evaluation can be done by `notebooks/calib_based.ipynb`. 

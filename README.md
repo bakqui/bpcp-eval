@@ -83,7 +83,7 @@ or test-time calibration module (`TTC`):
 cd calib_based/ttc
 python main.py -f configs/config.yaml
 ```
-Before running, update each config file with your local dataset paths and index column names. For testing under different re-calibration points, set `cal_column` in the config file to the appropriate value:
+Before running, update each config file with your local dataset paths and index column names. For testing under different re-calibration points, set `eval_only` as `true` in the config file and change `cal_column` to the appropriate value:
 - Every 120 minutes: `calib_point_120min`
 - \+ $\Delta BP$: `calib_point_120min_deltabp`
 - \+ PELT: `calib_point_120min_pelt`

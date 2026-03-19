@@ -17,7 +17,6 @@ def fetch_dataloader(
         index_filename = params.train_index_filename
         dataset = PulseDBDataset(params, index_filename=index_filename)
     elif mode in ['valid', 'test']:
-        # index_filename = params.valid_index_filename
         index_filename = params.get(f'{mode}_index_filename')
         dataset = PulseDBDataset(
             params,

@@ -110,7 +110,7 @@ echo -e "\tENCODER_PATH: ${ENCODER_PATH}"
 # set CUDA_VISIBLE_DEVICES
 export CUDA_VISIBLE_DEVICES=$GPUS
 
-# run downstream training
+# run calibration-free PPG-to-BP estimation experiment
 NUM_GPUS=$(echo $GPUS | tr "," "\n" | wc -l)
 
 TORCHRUN_ARGS="--master_port $MASTER_PORT \
